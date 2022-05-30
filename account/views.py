@@ -60,25 +60,45 @@ def home(request):
         if transaction.description == "The service request is processed successfully.":
             if Chama.objects.filter(user=request.user).exists():
                 chama = Chama.objects.get(user=request.user)
+               
                 context["chama"] = chama
             else:
                 # check if chama with frequency and amount exists and add user to chama
                 if Chama.objects.filter(frequency=frequency, amount=amount).exists():
-                    chama = Chama.objects.get(frequency=frequency, amount=amount)
-                    chama.user = request.user
-                    context["chama"] = chama
-                    chama.save()
-                else:
-                    # create chama with frequency and amount
-                    chama = Chama.objects.create(
+
+                    #Get the chama level,then check if its already full.If so, create a new one
+
+                    chama_members_count = Chama.objects.filter(chama_id=chama.chama_id).count()
+
+                    chama_is_full = False 
+
+                    if chama.level == 1 and chama_members_count == 3:
+                        chama_is_full = True 
+
+                    if chama.level == 2 and chama_members_count == 4:
+                        chama_is_full = True 
+
+                    if chama.level == 3 and chama_members_count == 6:
+                        chama_is_full = True         
+                        
+                    if chama_is_full is False:
+                        chama = Chama.objects.get(frequency=frequency, amount=amount)
+                        chama.chama_id = chama.chama_id
+                        chama.user = request.user
+                        context["chama"] = chama
+                        chama.save()
+                        return render(request, 'account/home.html', context)
+                
+                # create new chama with frequency and amount
+                chama = Chama.objects.create(
                         frequency=frequency,
                         amount=amount,
                         user=request.user
-                    )
-                    chama.save()
-                    transaction.chama = chama
-                    transaction.save()
-                    context["chama"] = chama
+                )
+                chama.save()
+                transaction.chama = chama
+                transaction.save()
+                context["chama"] = chama
 
             return render(request, 'account/home.html', context)
 
